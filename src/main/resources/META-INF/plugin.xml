@@ -11,8 +11,10 @@
          on how to target different products -->
     <depends>com.intellij.modules.platform</depends>
 
+    <depends>com.intellij.modules.lang</depends>
+
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Add your extensions here -->
+        <formattingService implementation="org.jetbrains.uncrustify.UncrustifyAsyncFormattingService"/>
     </extensions>
 
     <actions>
