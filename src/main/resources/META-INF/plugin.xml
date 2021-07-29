@@ -1,0 +1,21 @@
+<idea-plugin>
+    <id>org.jetbrains.uncrustify</id>
+    <name>Uncrustify</name>
+    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">JetBrains</vendor>
+
+    <description><![CDATA[
+    Invokes <a href="https://github.com/uncrustify/uncrustify">Uncrustify</a> to format code.
+    ]]></description>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+</idea-plugin>
