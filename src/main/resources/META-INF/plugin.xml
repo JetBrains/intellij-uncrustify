@@ -14,7 +14,17 @@
     <depends>com.intellij.modules.lang</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <formattingService implementation="org.jetbrains.uncrustify.UncrustifyAsyncFormattingService"/>
+        <formattingService
+                implementation="org.jetbrains.uncrustify.UncrustifyAsyncFormattingService"/>
+
+        <projectConfigurable
+                instance="org.jetbrains.uncrustify.settings.UncrustifySettingsConfigurable"
+                displayName="Uncrustify"
+                id="uncrustify"
+                parentId="tools"/>
+
+        <projectService
+                serviceImplementation="org.jetbrains.uncrustify.settings.UncrustifySettingsState"/>
     </extensions>
 
     <actions>

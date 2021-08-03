@@ -1,16 +1,27 @@
 package org.jetbrains.uncrustify;
 
+import com.intellij.application.options.CodeStyle;
 import com.intellij.formatting.service.AsyncDocumentFormattingService;
 import com.intellij.formatting.service.AsyncFormattingRequest;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.NlsSafe;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.uncrustify.settings.UncrustifySettingsState;
 
 import java.io.*;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 
 public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingService {
+
+    private static final Logger log = Logger.getInstance(UncrustifyAsyncFormattingService.class);
+    private static final List<String> supportedLanguagesIds = List.of(
+            "C", "CPP", "D", "CS", "JAVA", "PAWN", "OC", "OC+", "VALA");
+
     @Override
     protected @Nullable FormattingTask createFormattingTask(@NotNull AsyncFormattingRequest formattingRequest) {
         return new UncrustifyFormattingTask(formattingRequest);
@@ -18,7 +29,7 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
     @Override
     protected @NotNull String getNotificationGroupId() {
-        //TODO do I need to extend an EP? Experiment with actually making notifications
+        //TODO Find out more about group ids
         return "Uncrustify notification groupId";
     }
 
@@ -34,16 +45,16 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
     @Override
     public boolean canFormat(@NotNull PsiFile file) {
+        //TODO file.getFileType.getName() might be a little better, as it doesn't require a Language class
+        UncrustifySettingsState settings = UncrustifySettingsState.getInstance(file.getProject());
+        String langId = file.getLanguage().getID();
 
-        //getlangueage
-        return file.getFileType().getName().equalsIgnoreCase("java");
+        return settings.uncrustifyFormattingEnabled && supportedLanguagesIds.stream().anyMatch(langId::equalsIgnoreCase);
     }
 
     protected class UncrustifyFormattingTask implements FormattingTask {
-
-        private static final int READ_BUF_SIZE = 4096;
-
         private final AsyncFormattingRequest formattingRequest;
+        private Process uncrustifyProcess;
 
         public UncrustifyFormattingTask(AsyncFormattingRequest formattingRequest) {
             this.formattingRequest = formattingRequest;
@@ -51,51 +62,62 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
         @Override
         public boolean cancel() {
-            //TODO store process in an instance var and kill the subprocess
-            return false;
+            if (uncrustifyProcess == null || !uncrustifyProcess.isAlive()) {
+                return false;
+            }
+            uncrustifyProcess.destroyForcibly();
+            return true;
         }
 
         @Override
         public void run() {
-            //TODO some setting, where the path to uncrustify executable can be set
-            // for now, it must be found in $PATH
+            log.info("Running Uncrustify");
 
-            // verify that indeed, uncrustify cannot work on ranges
+            UncrustifySettingsState settings = UncrustifySettingsState.getInstance(formattingRequest.getContext().getProject());
+
+            //TODO verify that indeed, uncrustify cannot work on ranges
             String text = formattingRequest.getDocumentText();
             try {
-                Process uncrustifyProcess =
-                        new ProcessBuilder("/Users/vojtech.balik/Work/uncrustify/playground/uncrustify",
+                Path configPath = FileUtil.createTempFile("ijuncrustify", ".cfg", true).toPath();
+
+                UncrustifyCodeStyleExporter.export(
+                        configPath,
+                        CodeStyle.getLanguageSettings(formattingRequest.getContext().getContainingFile()));
+
+                uncrustifyProcess =
+                        new ProcessBuilder(settings.uncrustifyExecutablePath,
                                 "-c",
-                                "/Users/vojtech.balik/Work/uncrustify/playground/test.cfg",
+                                configPath.toString(),
                                 "-l",
-                                "JAVA").start();
+                                formattingRequest.getContext().getContainingFile().getLanguage().getID()).start();
                 OutputStreamWriter osw = new OutputStreamWriter(uncrustifyProcess.getOutputStream());
                 osw.write(text);
                 osw.close();
                 int exitCode = uncrustifyProcess.waitFor();
 
-                // TODO log this stuff
-//                System.out.println("uncrustify exitCode: " + exitCode);
-//                BufferedReader er = new BufferedReader(new InputStreamReader(uncrustifyProcess.getErrorStream()));
-//                for (String line; (line = er.readLine()) != null;) {
-//                    System.out.println(line);
-//                }
+                if (exitCode != 0) {
+                    log.error(String.format("uncrustify exitCode: %d", exitCode));
+                }
+                BufferedReader er = new BufferedReader(new InputStreamReader(uncrustifyProcess.getErrorStream()));
+                for (String line; (line = er.readLine()) != null;) {
+                    log.debug(line);
+                }
 
                 if (exitCode != 0) {
                     formattingRequest.onError("Uncrustify formatting failed",
                             "Exit code " + exitCode + ". See logs for more information.");
                 }
 
-                InputStream is = uncrustifyProcess.getInputStream();
-                ByteArrayOutputStream formattedText = new ByteArrayOutputStream();
-                byte[] buffer = new byte[READ_BUF_SIZE];
-                for (int length; (length = is.read(buffer)) != -1; ) {
-                    formattedText.write(buffer, 0, length);
+                BufferedInputStream bis = new BufferedInputStream(uncrustifyProcess.getInputStream());
+                ByteArrayOutputStream formattedTextBuf = new ByteArrayOutputStream();
+                int result = bis.read();
+                while (result != -1) {
+                    formattedTextBuf.write((byte) result);
+                    result = bis.read();
                 }
-
-                formattingRequest.onTextReady(formattedText.toString());
+                formattingRequest.onTextReady(formattedTextBuf.toString());
             } catch(IOException | InterruptedException e) {
-                System.err.println("error running uncrustify: " + e.getMessage());
+                log.error("uncrustify service failed: " + e.getMessage());
                 formattingRequest.onError("Uncrustify failed",
                         "Exception occurred while running Uncrustify. See logs for details.");
             }
