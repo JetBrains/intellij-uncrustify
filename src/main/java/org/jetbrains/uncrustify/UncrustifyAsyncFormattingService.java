@@ -45,7 +45,6 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
     @Override
     public boolean canFormat(@NotNull PsiFile file) {
-        //TODO file.getFileType.getName() might be a little better, as it doesn't require a Language class
         UncrustifySettingsState settings = UncrustifySettingsState.getInstance(file.getProject());
         String langId = file.getLanguage().getID();
 
@@ -75,7 +74,6 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
             UncrustifySettingsState settings = UncrustifySettingsState.getInstance(formattingRequest.getContext().getProject());
 
-            //TODO verify that indeed, uncrustify cannot work on ranges
             String text = formattingRequest.getDocumentText();
             try {
                 Path configPath = FileUtil.createTempFile("ijuncrustify", ".cfg", true).toPath();
@@ -104,8 +102,8 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
                 }
 
                 if (exitCode != 0) {
-                    formattingRequest.onError("Uncrustify formatting failed",
-                            "Exit code " + exitCode + ". See logs for more information.");
+                    formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
+                            String.format(UncrustifyBundle.message("uncrustify.process.error.exitCode"), exitCode));
                 }
 
                 BufferedInputStream bis = new BufferedInputStream(uncrustifyProcess.getInputStream());
@@ -118,8 +116,8 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
                 formattingRequest.onTextReady(formattedTextBuf.toString());
             } catch(IOException | InterruptedException e) {
                 log.error("uncrustify service failed: " + e.getMessage());
-                formattingRequest.onError("Uncrustify failed",
-                        "Exception occurred while running Uncrustify. See logs for details.");
+                formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
+                        UncrustifyBundle.message("uncrustify.process.error.generalException"));
             }
         }
     }

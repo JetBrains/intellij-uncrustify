@@ -9,26 +9,30 @@ import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.FormBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.uncrustify.UncrustifyBundle;
 
 import javax.swing.*;
 
 public class UncrustifySettingsComponent {
 
     private final JPanel myMainPanel;
-    //TODO what is Path completion?
     private final TextFieldWithBrowseButton myUncrustifyExecutablePath = new TextFieldWithBrowseButton();
-    private final JBCheckBox myUncrustifyFormattingEnabled = new JBCheckBox("Enable Uncrustify formatting");
+    private final JBCheckBox myUncrustifyFormattingEnabled = new JBCheckBox(UncrustifyBundle.message("uncrustify.settings.enableFormatting.label"));
 
     public UncrustifySettingsComponent(@NotNull Project project) {
         myMainPanel = FormBuilder.createFormBuilder()
-                .addLabeledComponent(new JBLabel("Uncrustify executable path"), myUncrustifyExecutablePath, 1, false)
+                .addLabeledComponent(new JBLabel(
+                        UncrustifyBundle.message("uncrustify.settings.executablePath.label")),
+                        myUncrustifyExecutablePath,
+                        1,
+                        false)
                 .addComponent(myUncrustifyFormattingEnabled, 1)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
 
         myUncrustifyExecutablePath.addBrowseFolderListener(
-                "Uncrustify Executable",
-                "Select a path to the Uncrustify executable",
+                UncrustifyBundle.message("uncrustify.settings.executablePath.title"),
+                UncrustifyBundle.message("uncrustify.settings.executablePath.description"),
                 project,
                 FileChooserDescriptorFactory.createSingleFileOrExecutableAppDescriptor()
         );
@@ -38,9 +42,9 @@ public class UncrustifySettingsComponent {
         return myMainPanel;
     }
 
-//    public JComponent getPreferredFocusedComponent() {
-//        return myUncrustifyFormattingEnabled;
-//    }
+    public JComponent getPreferredFocusedComponent() {
+        return myUncrustifyExecutablePath;
+    }
 
     @NotNull
     public String getUncrustifyExecutablePath() {

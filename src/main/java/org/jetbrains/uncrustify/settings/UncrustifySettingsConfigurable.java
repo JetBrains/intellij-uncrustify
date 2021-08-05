@@ -9,7 +9,6 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 
-//TODO If I use a ConfigurableProvider, I can hide Uncrustify from Settings in unrelated versions of the IDE
 public class UncrustifySettingsConfigurable implements Configurable {
 
     private UncrustifySettingsComponent mySettingsComponent;
