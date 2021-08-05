@@ -25,6 +25,8 @@
 
         <projectService
                 serviceImplementation="org.jetbrains.uncrustify.settings.UncrustifySettingsState"/>
+
+        <notificationGroup id="Uncrustify Plugin" displayType="BALLOON"/>
     </extensions>
 
     <actions>

@@ -29,8 +29,7 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
     @Override
     protected @NotNull String getNotificationGroupId() {
-        //TODO Find out more about group ids
-        return "Uncrustify notification groupId";
+        return "Uncrustify Plugin";
     }
 
     @Override

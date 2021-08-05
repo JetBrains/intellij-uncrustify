@@ -40,10 +40,15 @@ public class UncrustifySettingsConfigurable implements Configurable {
     }
 
     @Override
+    public @Nullable JComponent getPreferredFocusedComponent() {
+        return mySettingsComponent.getPreferredFocusedComponent();
+    }
+
+    @Override
     public void apply() throws ConfigurationException {
-        //TODO validate uncrustify executable, throw configuration exception in case of error?
+        //TODO validate uncrustify executable, throw configuration exception in case of error
         UncrustifySettingsState settings = UncrustifySettingsState.getInstance(myProject);
-        //TODO: is the path valid?
+
         settings.uncrustifyExecutablePath = mySettingsComponent.getUncrustifyExecutablePath();
         settings.uncrustifyFormattingEnabled = mySettingsComponent.getUncrustifyFormattingEnabled();
     }

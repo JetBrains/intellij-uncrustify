@@ -28,6 +28,7 @@ public class UncrustifySettingsState implements PersistentStateComponent<Uncrust
 
     @Override
     public void loadState(@NotNull UncrustifySettingsState state) {
+        //TODO perform validation?
         XmlSerializerUtil.copyBean(state, this);
     }
 }
