@@ -9,12 +9,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @State(
-        name = "org.jetbrains.uncrustify.settings.UncrustifySettingsState",
-        storages = {@Storage("UncrustifyPluginSettings.xml")}
+        name = "UncrustifySettings",
+        storages = {@Storage("uncrustifyPluginSettings.xml")}
 )
 public class UncrustifySettingsState implements PersistentStateComponent<UncrustifySettingsState> {
-    public String uncrustifyExecutablePath;
-    public boolean uncrustifyFormattingEnabled;
+    public String executablePath;
+    public boolean formattingEnabled;
 
     public static UncrustifySettingsState getInstance(@NotNull Project project) {
         return project.getService(UncrustifySettingsState.class);

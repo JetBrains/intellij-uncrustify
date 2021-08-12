@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
+@SuppressWarnings("UnstableApiUsage")
 public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingService {
 
     private static final Logger log = Logger.getInstance(UncrustifyAsyncFormattingService.class);
@@ -47,10 +48,10 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
         UncrustifySettingsState settings = UncrustifySettingsState.getInstance(file.getProject());
         String langId = file.getLanguage().getID();
 
-        return settings.uncrustifyFormattingEnabled && supportedLanguagesIds.stream().anyMatch(langId::equalsIgnoreCase);
+        return settings.formattingEnabled && supportedLanguagesIds.stream().anyMatch(langId::equalsIgnoreCase);
     }
 
-    protected class UncrustifyFormattingTask implements FormattingTask {
+    protected static class UncrustifyFormattingTask implements FormattingTask {
         private final AsyncFormattingRequest formattingRequest;
         private Process uncrustifyProcess;
 
@@ -82,7 +83,7 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
                         CodeStyle.getLanguageSettings(formattingRequest.getContext().getContainingFile()));
 
                 uncrustifyProcess =
-                        new ProcessBuilder(settings.uncrustifyExecutablePath,
+                        new ProcessBuilder(settings.executablePath,
                                 "-c",
                                 configPath.toString(),
                                 "-l",
@@ -93,17 +94,15 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
                 int exitCode = uncrustifyProcess.waitFor();
 
                 if (exitCode != 0) {
-                    log.error(String.format("uncrustify exitCode: %d", exitCode));
+                    log.warn(String.format("uncrustify exitCode: %d", exitCode));
+                    formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
+                            String.format(UncrustifyBundle.message("uncrustify.process.error.exitCode"), exitCode));
                 }
                 BufferedReader er = new BufferedReader(new InputStreamReader(uncrustifyProcess.getErrorStream()));
                 for (String line; (line = er.readLine()) != null;) {
                     log.debug(line);
                 }
-
-                if (exitCode != 0) {
-                    formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
-                            String.format(UncrustifyBundle.message("uncrustify.process.error.exitCode"), exitCode));
-                }
+                //TODO extract uncrustify error message, do NOT write it to onTextReady()
 
                 BufferedInputStream bis = new BufferedInputStream(uncrustifyProcess.getInputStream());
                 ByteArrayOutputStream formattedTextBuf = new ByteArrayOutputStream();
@@ -113,10 +112,12 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
                     result = bis.read();
                 }
                 formattingRequest.onTextReady(formattedTextBuf.toString());
-            } catch(IOException | InterruptedException e) {
-                log.error("uncrustify service failed: " + e.getMessage());
+            } catch(IOException e) {
+                log.warn("uncrustify service failed: " + e.getMessage());
                 formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
                         UncrustifyBundle.message("uncrustify.process.error.generalException"));
+            } catch(InterruptedException e) {
+                log.warn("uncrustify process was interrupted: " + e.getMessage());
             }
         }
     }
