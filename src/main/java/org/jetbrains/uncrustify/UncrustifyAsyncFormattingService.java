@@ -1,6 +1,11 @@
 package org.jetbrains.uncrustify;
 
 import com.intellij.application.options.CodeStyle;
+import com.intellij.execution.ExecutionException;
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.execution.process.CapturingProcessAdapter;
+import com.intellij.execution.process.OSProcessHandler;
+import com.intellij.execution.process.ProcessEvent;
 import com.intellij.formatting.service.AsyncDocumentFormattingService;
 import com.intellij.formatting.service.AsyncFormattingRequest;
 import com.intellij.openapi.diagnostic.Logger;
@@ -12,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.uncrustify.settings.UncrustifySettingsState;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -53,7 +59,7 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
     protected static class UncrustifyFormattingTask implements FormattingTask {
         private final AsyncFormattingRequest formattingRequest;
-        private Process uncrustifyProcess;
+        private OSProcessHandler uncrustifyHandler;
 
         public UncrustifyFormattingTask(AsyncFormattingRequest formattingRequest) {
             this.formattingRequest = formattingRequest;
@@ -61,10 +67,10 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
         @Override
         public boolean cancel() {
-            if (uncrustifyProcess == null || !uncrustifyProcess.isAlive()) {
+            if (uncrustifyHandler == null || !uncrustifyHandler.getProcess().isAlive()) {
                 return false;
             }
-            uncrustifyProcess.destroyForcibly();
+            uncrustifyHandler.destroyProcess();
             return true;
         }
 
@@ -82,42 +88,49 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
                         configPath,
                         CodeStyle.getLanguageSettings(formattingRequest.getContext().getContainingFile()));
 
-                uncrustifyProcess =
-                        new ProcessBuilder(settings.executablePath,
+                GeneralCommandLine commandLine = new GeneralCommandLine()
+                        .withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE)
+                        .withExePath(settings.executablePath)
+                        .withParameters(
                                 "-c",
                                 configPath.toString(),
                                 "-l",
-                                formattingRequest.getContext().getContainingFile().getLanguage().getID()).start();
-                OutputStreamWriter osw = new OutputStreamWriter(uncrustifyProcess.getOutputStream());
-                osw.write(text);
-                osw.close();
-                int exitCode = uncrustifyProcess.waitFor();
+                                formattingRequest.getContext().getContainingFile().getLanguage().getID());
 
-                if (exitCode != 0) {
-                    log.warn(String.format("uncrustify exitCode: %d", exitCode));
+                uncrustifyHandler = new OSProcessHandler(commandLine.withCharset(StandardCharsets.UTF_8));
+                uncrustifyHandler.addProcessListener(new CapturingProcessAdapter() {
+                    @Override
+                    public void processTerminated(@NotNull ProcessEvent event) {
+                        super.processTerminated(event);
+
+                        int exitCode = getOutput().getExitCode();
+                        if (exitCode != 0) {
+                            log.warn(String.format("uncrustify exitCode: %d", exitCode));
+                            log.debug(getOutput().getStderr());
+                            //TODO try to extract uncrustify error message
+                            formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
+                                    String.format(UncrustifyBundle.message("uncrustify.process.error.exitCode"), exitCode));
+                        } else {
+                            formattingRequest.onTextReady(getOutput().getStdout());
+                        }
+
+                    }
+                });
+                uncrustifyHandler.startNotify();
+
+                try(OutputStreamWriter osw = new OutputStreamWriter(uncrustifyHandler.getProcessInput())) {
+                    osw.write(text);
+                } catch(IOException e) {
+                    log.warn("uncrustify service failed: " + e.getMessage());
+                    log.debug(e);
                     formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
-                            String.format(UncrustifyBundle.message("uncrustify.process.error.exitCode"), exitCode));
+                            UncrustifyBundle.message("uncrustify.process.error.generalException"));
                 }
-                BufferedReader er = new BufferedReader(new InputStreamReader(uncrustifyProcess.getErrorStream()));
-                for (String line; (line = er.readLine()) != null;) {
-                    log.debug(line);
-                }
-                //TODO extract uncrustify error message, do NOT write it to onTextReady()
-
-                BufferedInputStream bis = new BufferedInputStream(uncrustifyProcess.getInputStream());
-                ByteArrayOutputStream formattedTextBuf = new ByteArrayOutputStream();
-                int result = bis.read();
-                while (result != -1) {
-                    formattedTextBuf.write((byte) result);
-                    result = bis.read();
-                }
-                formattingRequest.onTextReady(formattedTextBuf.toString());
-            } catch(IOException e) {
+            } catch(IOException | ExecutionException e) {
                 log.warn("uncrustify service failed: " + e.getMessage());
+                log.debug(e);
                 formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
                         UncrustifyBundle.message("uncrustify.process.error.generalException"));
-            } catch(InterruptedException e) {
-                log.warn("uncrustify process was interrupted: " + e.getMessage());
             }
         }
     }
