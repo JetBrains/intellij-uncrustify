@@ -10,14 +10,18 @@ import org.jetbrains.uncrustify.UncrustifyBundle;
 
 import javax.swing.*;
 
+@SuppressWarnings("UnstableApiUsage")
 public class UncrustifySettingsConfigurable implements Configurable {
 
     private UncrustifySettingsComponent mySettingsComponent;
-    private final Project myProject;
 
-    public UncrustifySettingsConfigurable(@NotNull Project project) {
-        myProject = project;
-    }
+//    private final Project myProject;
+//
+//    public UncrustifySettingsConfigurable(@NotNull Project project) {
+//        myProject = project;
+//    }
+
+    public UncrustifySettingsConfigurable() {}
 
     @Override
     public @NlsContexts.ConfigurableName String getDisplayName() {
@@ -26,18 +30,16 @@ public class UncrustifySettingsConfigurable implements Configurable {
 
     @Override
     public @Nullable JComponent createComponent() {
-        mySettingsComponent = new UncrustifySettingsComponent(myProject);
+        mySettingsComponent = new UncrustifySettingsComponent(null);
         return mySettingsComponent.getPanel();
     }
 
     @Override
     public boolean isModified() {
-        UncrustifySettingsState settings = UncrustifySettingsState.getInstance(myProject);
+        UncrustifySettingsState settings = UncrustifySettingsState.getInstance();
         assert mySettingsComponent != null;
         assert settings != null;
-        boolean modified = !mySettingsComponent.getUncrustifyExecutablePath().equals(settings.executablePath);
-        modified |= mySettingsComponent.getUncrustifyFormattingEnabled() != settings.formattingEnabled;
-        return modified;
+        return !mySettingsComponent.getUncrustifyExecutablePath().equals(settings.executablePath);
     }
 
     @Override
@@ -47,18 +49,15 @@ public class UncrustifySettingsConfigurable implements Configurable {
 
     @Override
     public void apply() {
-        //TODO validate uncrustify executable, throw configuration exception in case of error
-        UncrustifySettingsState settings = UncrustifySettingsState.getInstance(myProject);
+        UncrustifySettingsState settings = UncrustifySettingsState.getInstance();
 
         settings.executablePath = mySettingsComponent.getUncrustifyExecutablePath();
-        settings.formattingEnabled = mySettingsComponent.getUncrustifyFormattingEnabled();
     }
 
     @Override
     public void reset() {
-        UncrustifySettingsState settings = UncrustifySettingsState.getInstance(myProject);
+        UncrustifySettingsState settings = UncrustifySettingsState.getInstance();
         mySettingsComponent.setUncrustifyExecutablePath(settings.executablePath);
-        mySettingsComponent.setUncrustifyFormattingEnabled(settings.formattingEnabled);
     }
 
     @Override

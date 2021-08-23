@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.jetbrains.uncrustify</id>
     <name>Uncrustify</name>
-    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">JetBrains</vendor>
+    <vendor email="vojtech.balik@jetbrains.com" url="http://www.jetbrains.com">JetBrains</vendor>
 
     <description><![CDATA[
     Invokes <a href="https://github.com/uncrustify/uncrustify">Uncrustify</a> to format code.
@@ -17,16 +17,25 @@
         <formattingService
                 implementation="org.jetbrains.uncrustify.UncrustifyAsyncFormattingService"/>
 
-        <projectConfigurable
+        <applicationConfigurable
                 instance="org.jetbrains.uncrustify.settings.UncrustifySettingsConfigurable"
                 displayName="Uncrustify"
                 id="uncrustify"
                 parentId="tools"/>
 
-        <projectService
+        <applicationService
                 serviceImplementation="org.jetbrains.uncrustify.settings.UncrustifySettingsState"/>
 
+        <generalCodeStyleOptionsProvider instance="org.jetbrains.uncrustify.settings.UncrustifyFormatConfigurable"/>
+
+        <codeStyleSettingsProvider implementation="org.jetbrains.uncrustify.settings.UncrustifyFormatConfigurable"/>
+
         <notificationGroup id="Uncrustify Plugin" displayType="BALLOON"/>
+
+        <schemeExporter
+                name="Uncrustify config file"
+                schemeClass="com.intellij.psi.codeStyle.CodeStyleScheme"
+                implementationClass="org.jetbrains.uncrustify.UncrustifyCodeStyleExporter"/>
     </extensions>
 
     <actions>

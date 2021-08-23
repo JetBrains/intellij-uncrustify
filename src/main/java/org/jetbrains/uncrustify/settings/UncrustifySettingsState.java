@@ -1,6 +1,8 @@
 package org.jetbrains.uncrustify.settings;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
+import com.intellij.openapi.components.RoamingType;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.project.Project;
@@ -10,14 +12,17 @@ import org.jetbrains.annotations.Nullable;
 
 @State(
         name = "UncrustifySettings",
-        storages = {@Storage("uncrustifyPluginSettings.xml")}
+        storages = {@Storage(value = "uncrustifyPluginSettings.xml", roamingType = RoamingType.DISABLED)}
 )
 public class UncrustifySettingsState implements PersistentStateComponent<UncrustifySettingsState> {
     public String executablePath;
-    public boolean formattingEnabled;
 
-    public static UncrustifySettingsState getInstance(@NotNull Project project) {
-        return project.getService(UncrustifySettingsState.class);
+    // When false, Uncrustify configuration file is generated from current code style settings
+    public boolean useCustomConfig = false;
+    public String customConfigPath = "";
+
+    public static UncrustifySettingsState getInstance() {
+        return ApplicationManager.getApplication().getService(UncrustifySettingsState.class);
     }
 
     @Nullable
@@ -28,7 +33,6 @@ public class UncrustifySettingsState implements PersistentStateComponent<Uncrust
 
     @Override
     public void loadState(@NotNull UncrustifySettingsState state) {
-        //TODO perform validation?
         XmlSerializerUtil.copyBean(state, this);
     }
 }
