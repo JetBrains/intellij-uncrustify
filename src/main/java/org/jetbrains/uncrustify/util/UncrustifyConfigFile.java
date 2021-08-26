@@ -1,58 +1,105 @@
-package org.jetbrains.uncrustify;
+package org.jetbrains.uncrustify.util;
 
 import com.intellij.execution.ExecutionException;
-import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.execution.process.CapturingProcessAdapter;
 import com.intellij.execution.process.OSProcessHandler;
+import com.intellij.execution.process.ProcessEvent;
 import com.intellij.lang.Language;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectUtil;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.codeStyle.CodeStyleSettings;
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.uncrustify.UncrustifyConfigWriter;
+import org.jetbrains.uncrustify.settings.UncrustifySettingsState;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Collections;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Objects;
 
-public class UncrustifyUtil {
-    private static final Logger log = Logger.getInstance(UncrustifyUtil.class);
+public class UncrustifyConfigFile {
+    private static final Logger log = Logger.getInstance(UncrustifyConfigFile.class);
 
-    private static final Pattern VERSION_PATTERN = Pattern.compile("Uncrustify(_d)?-((\\d+)\\.(\\d+)\\.(\\d+))(_[a-z])?$");
-    public static final List<String> supportedLanguagesIds = List.of(
-            "C", "CPP", "D", "CS", "JAVA", "PAWN", "OC", "OC+", "VALA");
+    private static final String JAVA_SNIPPET = "public class Uncrustify {public static void main(String args[]){System.out.println(\"Hello Uncrustify!\");}}";
 
-    public static @Nullable String validateVersion(String version) {
-        Matcher matcher = VERSION_PATTERN.matcher(version);
-        return matcher.find() ? matcher.group() : null;
+    public interface VerificationListener {
+        void onValid();
+
+        void onInvalid();
     }
 
-    //TODO does not work very well as getCommonSettings finds language by comparing the provided name to getDisplayName...
-    public static CommonCodeStyleSettings findRelevantCommonCodeStyleSettings(CodeStyleSettings settings) {
-        return supportedLanguagesIds.stream()
+    private static final String PROJECT_CONFIG_PATH = "uncrustify.cfg";
+
+    public static @Nullable String getProjectConfigPath(@NotNull Project project) {
+        VirtualFile projectDir = ProjectUtil.guessProjectDir(project);
+        if (projectDir != null) {
+            VirtualFile projectConfig = projectDir.findChild(PROJECT_CONFIG_PATH);
+            if (projectConfig != null) {
+                Path projectConfigPath = projectConfig.getFileSystem().getNioPath(projectConfig);
+                if (projectConfigPath != null) {
+                    return projectConfigPath.normalize().toAbsolutePath().toString();
+                }
+            }
+        }
+        return null;
+    }
+
+    public static @Nullable String getSettingConfigPath() {
+        String configPath = UncrustifySettingsState.getInstance().configPath;
+        if (configPath != null && !configPath.isBlank()) {
+            return configPath;
+        } else {
+            return null;
+        }
+    }
+
+    public static void verify(@NotNull String executablePath, @NotNull String configPath, @NotNull VerificationListener listener, boolean block) throws ExecutionException {
+        OSProcessHandler handler = UncrustifyUtil.createProcessHandler(
+                executablePath,
+                "-c", configPath, "-l", "JAVA");
+        handler.addProcessListener(new CapturingProcessAdapter() {
+            public void processTerminated(@NotNull ProcessEvent event) {
+                super.processTerminated(event);
+
+                int exitCode = event.getExitCode();
+                if (exitCode == 0) {
+                    listener.onValid();
+                } else {
+                    listener.onInvalid();
+                }
+            }
+        });
+        //TODO after some timeout, kill the process (for cases when it doesn't terminate on its own for some reason)
+        handler.startNotify();
+
+        try (OutputStreamWriter osw = new OutputStreamWriter(handler.getProcessInput())) {
+            osw.write(JAVA_SNIPPET);
+        } catch (IOException e) {
+            throw new ExecutionException("Error when writing to Uncrustify stdin");
+        }
+
+        if (block) {
+            handler.waitFor();
+        }
+    }
+
+    public static CommonCodeStyleSettings findRelevantCommonCodeStyleSettings(@NotNull CodeStyleSettings settings) {
+        return UncrustifyUtil.supportedLanguagesIds.stream()
+                .map(Language::findLanguageByID)
+                .filter(Objects::nonNull)
                 .map(settings::getCommonSettings)
-                .filter((s) -> s.getLanguage() != Language.ANY)
                 .findFirst()
                 .orElseGet(() -> settings.getCommonSettings(Language.ANY));
-    }
-
-    public static OSProcessHandler createProcessHandler(@NotNull String path, String... params) throws ExecutionException {
-        GeneralCommandLine commandLine = new GeneralCommandLine()
-                .withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE)
-                .withExePath(path)
-                .withParameters(params);
-
-        return new OSProcessHandler(commandLine.withCharset(StandardCharsets.UTF_8));
     }
 
     public static void exportCodeStyle(
@@ -96,17 +143,17 @@ public class UncrustifyUtil {
 
     private static void exportCommon(@NotNull UncrustifyConfigWriter writer, @NotNull CommonCodeStyleSettings settings) throws IOException {
 
-        //TODO input_tab_size and output_tab_size confuse me, tab size is only a visual property? Do experiments
+        //TODO input_tab_size and output_tab_size, how do they work?
 
         // start Indenting
-        // There are a lot more Indenting Options in Uncrustify, but this is all I can do with base common indent opt
+        // There are a lot more Indenting Options in Uncrustify, but this is all there can be done with base common indent options
         CommonCodeStyleSettings.IndentOptions opts = settings.getIndentOptions();
         assert opts != null : "No indenting options";
 
         writer.write_option("indent_class", String.valueOf(!settings.DO_NOT_INDENT_TOP_LEVEL_CLASS_MEMBERS));
         writer.write_option("indent_columns", String.valueOf(opts.INDENT_SIZE));
         writer.write_option("indent_continue", String.valueOf(opts.CONTINUATION_INDENT_SIZE));
-        //TODO Smart Tabs. Test this. It probably is not 100% the same behaviour
+        //TODO Smart Tabs -- test this. It probably is not 100% the same behaviour.
         {
             int indent_with_tabs = 0;
             if (opts.USE_TAB_CHARACTER) {
@@ -163,7 +210,7 @@ public class UncrustifyUtil {
 
         // sp_before_sparen also affects for, switch, while, etc.
         writer.write_option("sp_before_sparen", sp_opt(settings.SPACE_BEFORE_IF_PARENTHESES));
-        // although for while specifically, it is overrideable
+        // although for 'while' specifically, it is overrideable
         writer.write_option("sp_while_paren_open", sp_opt(settings.SPACE_BEFORE_WHILE_PARENTHESES));
 
         writer.write_option("sp_inside_paren_cast", sp_opt(settings.SPACE_WITHIN_CAST_PARENTHESES));
@@ -205,39 +252,26 @@ public class UncrustifyUtil {
 
         writer.write_option("nl_start_of_file", String.valueOf(settings.BLANK_LINES_BEFORE_PACKAGE));
 
-        writer.write_option("nl_max", String.valueOf(max(
+        writer.write_option("nl_max", String.valueOf(UncrustifyUtil.max(
                 settings.KEEP_BLANK_LINES_IN_DECLARATIONS,
                 settings.KEEP_BLANK_LINES_IN_CODE,
                 settings.KEEP_BLANK_LINES_BETWEEN_PACKAGE_DECLARATION_AND_HEADER)+1));
 
-        writer.write_option("nl_max_blank_in_func", String.valueOf(settings.KEEP_BLANK_LINES_IN_CODE));
-        writer.write_option("nl_inside_empty_func", String.valueOf(settings.KEEP_BLANK_LINES_IN_CODE));
+        writer.write_option("nl_max_blank_in_func", String.valueOf(settings.KEEP_BLANK_LINES_IN_CODE+1));
+        writer.write_option("nl_inside_empty_func", String.valueOf(settings.KEEP_BLANK_LINES_IN_CODE+1));
 
-        writer.write_option("nl_before_func_body_def", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY)+1);
-        writer.write_option("nl_before_func_class_def", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY)+1);
-        writer.write_option("nl_before_func_class_proto", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY)+1);
-        writer.write_option("nl_before_func_body_proto", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY)+1);
+        writer.write_option("nl_before_func_body_def", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY+1));
+        writer.write_option("nl_before_func_class_def", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY+1));
+        writer.write_option("nl_before_func_class_proto", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY+1));
+        writer.write_option("nl_before_func_body_proto", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY+1));
 //        writer.write_option("nl_after_func_proto_group", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY)+1);
 //        writer.write_option("nl_after_func_class_proto_group", String.valueOf(settings.BLANK_LINES_BEFORE_METHOD_BODY)+1);
 
-        writer.write_option("nl_before_class", String.valueOf(settings.BLANK_LINES_AROUND_CLASS));
-        writer.write_option("nl_after_class", String.valueOf(settings.BLANK_LINES_AROUND_CLASS));
+        writer.write_option("nl_before_class", String.valueOf(settings.BLANK_LINES_AROUND_CLASS+1));
+        writer.write_option("nl_after_class", String.valueOf(settings.BLANK_LINES_AROUND_CLASS+1));
 
-        writer.write_option("nl_remove_extra_newlines", String.valueOf(1));
-
-    }
-
-    public static int max(int... ints) {
-        if (ints.length == 0) {
-            throw new IllegalArgumentException();
-        }
-
-        int candidate = ints[0];
-        for (int i = 1; i < ints.length; ++i) {
-            if (ints[i] > candidate) {
-                candidate = ints[i];
-            }
-        }
-        return candidate;
+        // Any newlines that aren't explicitly defined will be removed. This is potentially dangerous and can lead to invalid code.
+        //  => use the default(=0)
+        // writer.write_option("nl_remove_extra_newlines", String.valueOf(1));
     }
 }

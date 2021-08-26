@@ -15,11 +15,8 @@ import org.jetbrains.annotations.Nullable;
         storages = {@Storage(value = "uncrustifyPluginSettings.xml", roamingType = RoamingType.DISABLED)}
 )
 public class UncrustifySettingsState implements PersistentStateComponent<UncrustifySettingsState> {
-    public String executablePath;
-
-    // When false, Uncrustify configuration file is generated from current code style settings
-    public boolean useCustomConfig = false;
-    public String customConfigPath = "";
+    public String executablePath = "";
+    public String configPath = "";
 
     public static UncrustifySettingsState getInstance() {
         return ApplicationManager.getApplication().getService(UncrustifySettingsState.class);

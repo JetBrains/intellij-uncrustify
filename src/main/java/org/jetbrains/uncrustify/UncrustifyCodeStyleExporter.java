@@ -8,6 +8,7 @@ import com.intellij.psi.codeStyle.CommonCodeStyleSettings;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.uncrustify.util.UncrustifyConfigFile;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,7 +27,7 @@ public class UncrustifyCodeStyleExporter extends SchemeExporter<CodeStyleScheme>
 
     @Override
     public void exportScheme(@Nullable Project project, @NotNull CodeStyleScheme scheme, @NotNull OutputStream outputStream) throws Exception {
-        UncrustifyUtil.exportCodeStyle(outputStream, UncrustifyUtil.findRelevantCommonCodeStyleSettings(scheme.getCodeStyleSettings()));
+        UncrustifyConfigFile.exportCodeStyle(outputStream, UncrustifyConfigFile.findRelevantCommonCodeStyleSettings(scheme.getCodeStyleSettings()));
     }
 
     @Override

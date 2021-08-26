@@ -15,6 +15,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.uncrustify.settings.UncrustifyFormatSettings;
 import org.jetbrains.uncrustify.settings.UncrustifySettingsState;
+import org.jetbrains.uncrustify.util.UncrustifyConfigFile;
+import org.jetbrains.uncrustify.util.UncrustifyUtil;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -22,7 +24,6 @@ import java.util.Set;
 
 @SuppressWarnings("UnstableApiUsage")
 public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingService {
-
     private static final Logger log = Logger.getInstance(UncrustifyAsyncFormattingService.class);
 
     @Override
@@ -76,7 +77,6 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
 
         protected void format(@NotNull String configPath, @NotNull String uncrustifyLanguageId) {
             String text = formattingRequest.getDocumentText();
-            UncrustifyFormatSettings settings = CodeStyle.getCustomSettings(formattingRequest.getContext().getContainingFile(), UncrustifyFormatSettings.class);
             try {
                 uncrustifyHandler = UncrustifyUtil.createProcessHandler(
                         getSettings().executablePath,
@@ -118,19 +118,29 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
             }
         }
 
+        /**
+         * There are 3 options for the location of the config file (sorted desc by priority):
+         * <ol>
+         *     <li>a file named 'uncrustify.cfg' in the project's directory</li>
+         *     <li>a file at custom path specified in Tools | Uncrustify settings</li>
+         *     <li>a temporary file automatically generated from IntelliJ code style settings</li>
+         * </ol>
+         */
         protected @NotNull String prepareConfig() throws IOException {
-            UncrustifyFormatSettings settings = CodeStyle.getCustomSettings(formattingRequest.getContext().getContainingFile(), UncrustifyFormatSettings.class);
-
-            String configPath;
-            if (getSettings().useCustomConfig) {
-                configPath = getSettings().customConfigPath;
-            } else {
-                Path tempFilePath = FileUtil.createTempFile("ijuncrustify", ".cfg", true).toPath();
-                UncrustifyUtil.exportCodeStyle(tempFilePath, CodeStyle.getLanguageSettings(formattingRequest.getContext().getContainingFile()));
-                configPath = tempFilePath.toString();
+            // 1
+            String configPath = UncrustifyConfigFile.getProjectConfigPath(formattingRequest.getContext().getProject());
+            if (configPath != null) {
+                return configPath;
             }
-
-            return configPath;
+            // 2
+            configPath = UncrustifyConfigFile.getSettingConfigPath();
+            if (configPath != null) {
+                return configPath;
+            }
+            // 3
+            Path tempFilePath = FileUtil.createTempFile("ijuncrustify", ".cfg", true).toPath();
+            UncrustifyConfigFile.exportCodeStyle(tempFilePath, CodeStyle.getLanguageSettings(formattingRequest.getContext().getContainingFile()));
+            return tempFilePath.toString();
         }
 
         protected void format(@NotNull String configPath) {

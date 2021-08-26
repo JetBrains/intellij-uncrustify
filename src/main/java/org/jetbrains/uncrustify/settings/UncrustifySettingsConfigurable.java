@@ -1,10 +1,7 @@
 package org.jetbrains.uncrustify.settings;
 
 import com.intellij.openapi.options.Configurable;
-import com.intellij.openapi.options.ConfigurationException;
-import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.NlsContexts;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.uncrustify.UncrustifyBundle;
 
@@ -14,12 +11,6 @@ import javax.swing.*;
 public class UncrustifySettingsConfigurable implements Configurable {
 
     private UncrustifySettingsComponent mySettingsComponent;
-
-//    private final Project myProject;
-//
-//    public UncrustifySettingsConfigurable(@NotNull Project project) {
-//        myProject = project;
-//    }
 
     public UncrustifySettingsConfigurable() {}
 
@@ -37,9 +28,9 @@ public class UncrustifySettingsConfigurable implements Configurable {
     @Override
     public boolean isModified() {
         UncrustifySettingsState settings = UncrustifySettingsState.getInstance();
-        assert mySettingsComponent != null;
-        assert settings != null;
-        return !mySettingsComponent.getUncrustifyExecutablePath().equals(settings.executablePath);
+        boolean modified = !mySettingsComponent.getConfigPath().equals(settings.executablePath);
+        modified |= !mySettingsComponent.getExecutablePath().equals(settings.executablePath);
+        return modified;
     }
 
     @Override
@@ -51,13 +42,15 @@ public class UncrustifySettingsConfigurable implements Configurable {
     public void apply() {
         UncrustifySettingsState settings = UncrustifySettingsState.getInstance();
 
-        settings.executablePath = mySettingsComponent.getUncrustifyExecutablePath();
+        settings.executablePath = mySettingsComponent.getExecutablePath();
+        settings.configPath = mySettingsComponent.getConfigPath();
     }
 
     @Override
     public void reset() {
         UncrustifySettingsState settings = UncrustifySettingsState.getInstance();
-        mySettingsComponent.setUncrustifyExecutablePath(settings.executablePath);
+        mySettingsComponent.setExecutablePath(settings.executablePath);
+        mySettingsComponent.setConfigPath(settings.configPath);
     }
 
     @Override

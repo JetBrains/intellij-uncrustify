@@ -39,6 +39,10 @@
     </extensions>
 
     <actions>
-        <!-- Add your actions here -->
+        <action id="org.jetbrains.uncrustify.UncrustifyDebugAction"
+                class="org.jetbrains.uncrustify.UncrustifyDebugAction" text="Uncrustify Config Debug Action"
+                description="Opens a diff window to easily see the difference between IJ a Uncrustify formatting">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
     </actions>
 </idea-plugin>
