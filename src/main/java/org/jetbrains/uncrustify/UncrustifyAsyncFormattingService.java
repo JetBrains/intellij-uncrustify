@@ -10,6 +10,7 @@ import com.intellij.formatting.service.AsyncFormattingRequest;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.NlsSafe;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,9 +50,13 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
     @Override
     public boolean canFormat(@NotNull PsiFile file) {
         UncrustifyFormatSettings settings = CodeStyle.getCustomSettings(file, UncrustifyFormatSettings.class);
-        String langId = file.getLanguage().getID();
 
-        return settings.ENABLED && UncrustifyUtil.supportedLanguagesIds.stream().anyMatch(langId::equalsIgnoreCase);
+        VirtualFile virtualFile = file.getVirtualFile();
+        if (virtualFile == null) {
+            return false;
+        }
+
+        return settings.ENABLED && UncrustifyUtil.isExtensionSupported(file.getVirtualFile().getName());
     }
 
     protected static class UncrustifyFormattingTask implements FormattingTask {
@@ -75,12 +80,12 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
             return UncrustifySettingsState.getInstance();
         }
 
-        protected void format(@NotNull String configPath, @NotNull String uncrustifyLanguageId) {
+        protected void format(@NotNull String configPath, @NotNull String filename) {
             String text = formattingRequest.getDocumentText();
             try {
                 uncrustifyHandler = UncrustifyUtil.createProcessHandler(
                         getSettings().executablePath,
-                        "-c", configPath, "-l", uncrustifyLanguageId);
+                        "-c", configPath, "--assume", filename);
 
                 uncrustifyHandler.addProcessListener(new CapturingProcessAdapter() {
                     @Override
@@ -144,8 +149,14 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
         }
 
         protected void format(@NotNull String configPath) {
-            PsiFile containingFile = formattingRequest.getContext().getContainingFile();
-            format(configPath, containingFile.getLanguage().getID());
+            VirtualFile virtualFile = formattingRequest.getContext().getVirtualFile();
+            if (virtualFile == null) {
+                log.warn("VirtualFile is null, cannot format. canFormat method should have prevented this.");
+                formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
+                        UncrustifyBundle.message("uncrustify.process.error.generalException"));
+                return;
+            }
+            format(configPath, virtualFile.getName());
         }
 
         @Override
