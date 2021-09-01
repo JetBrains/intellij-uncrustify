@@ -1,11 +1,11 @@
 package org.jetbrains.uncrustify;
 
 import com.intellij.application.options.CodeStyle;
+import com.intellij.formatting.FormatTextRanges;
 import com.intellij.formatting.service.FormattingService;
-import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.command.WriteCommandAction;
 import org.jetbrains.uncrustify.settings.UncrustifyFormatSettings;
 import org.jetbrains.uncrustify.settings.UncrustifySettingsState;
-import org.jetbrains.uncrustify.util.UncrustifyConfigFile;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,28 +58,19 @@ public class UncrustifyServiceTest extends BaseUncrustifyTest {
     }
 
     @Test
-    public void testConfigInProjectSelected() {
-        VirtualFile projectConfig = myFixture.copyFileToProject("valid.cfg", UncrustifyConfigFile.PROJECT_CONFIG_PATH);
-        UncrustifySettingsState.getInstance().configPath = "";
-        Assertions.assertEquals(projectConfig.getPath(), UncrustifyConfigFile.getConfigPath(myFixture.getProject()));
-    }
-
-    @Test
-    public void testConfigInProjectIsSelectedOverCustom() {
-        VirtualFile projectConfig = myFixture.copyFileToProject("valid.cfg", UncrustifyConfigFile.PROJECT_CONFIG_PATH);
-        UncrustifySettingsState.getInstance().configPath = Path.of(myFixture.getTestDataPath(), "valid.cfg").toString();
-        Assertions.assertEquals(projectConfig.getPath(), UncrustifyConfigFile.getConfigPath(myFixture.getProject()));
-    }
-
-    @Test
-    public void testCustomConfigIsSelected() {
-        UncrustifySettingsState.getInstance().configPath = Path.of(myFixture.getTestDataPath(), "valid.cfg").toString();
-        Assertions.assertEquals(UncrustifySettingsState.getInstance().configPath, UncrustifyConfigFile.getConfigPath(myFixture.getProject()));
-    }
-
-    @Test
-    public void testNoConfigToBeSelected() {
-        UncrustifySettingsState.getInstance().configPath = null;
-        Assertions.assertNull(UncrustifyConfigFile.getConfigPath(myFixture.getProject()));
+    public void testFormat() throws InterruptedException {
+        myFixture.configureByFile("helloworld.java");
+        CodeStyle.getCustomSettings(myFixture.getFile(), UncrustifyFormatSettings.class).ENABLED = true;
+        UncrustifySettingsState settings = UncrustifySettingsState.getInstance();
+        settings.executablePath = myExecutablePath;
+        settings.configPath = Path.of(getTestDataPath(), "valid.cfg").toAbsolutePath().toString();
+        String originalText = myFixture.getFile().getText();
+        WriteCommandAction.writeCommandAction(myFixture.getProject()).run(() -> {
+            myUncrustifyService.formatRanges(myFixture.getFile(), new FormatTextRanges(myFixture.getFile().getTextRange(), true), false, false);
+        });
+        //FIXME
+        Thread.sleep(1000);
+        String formattedText = myFixture.getFile().getText();
+        Assertions.assertNotEquals(originalText, formattedText);
     }
 }

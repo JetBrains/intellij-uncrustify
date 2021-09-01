@@ -2,9 +2,22 @@
     <id>org.jetbrains.uncrustify</id>
     <name>Uncrustify</name>
     <vendor email="vojtech.balik@jetbrains.com" url="http://www.jetbrains.com">JetBrains</vendor>
+    <idea-version since-build="2012.2"/>
 
     <description><![CDATA[
-    Invokes <a href="https://github.com/uncrustify/uncrustify">Uncrustify</a> to format code.
+Invokes <a href="https://github.com/uncrustify/uncrustify">Uncrustify</a> to format code.
+
+<h3>Usage</h3>
+To use Uncrustify to format files written in languages it supports, you must first enable it in <b>Settings | Editor | Code Style</b> and set path to an Uncrustify executable in <b>Settings | Tools | Uncrustify</b>. The plugin checks for file extensions, to decide whether files can be formatted using Uncrustify. Uncrustify is only able to reformat whole files (i.e. it will not be invoked when formatting selections).
+
+<h3>Configuration Files</h3>
+There are three possibilities when the plugin selects an Uncrustify configuration file to be used for formatting:
+<ol>
+    <li>File named <code>uncrustify.cfg</code> in project folder.</li>
+    <li>If <code>uncrustify.cfg</code> cannot be found in the project folder, custom file specified in <b>Settings | Tools | Uncrustify</b> is used.</li>
+    <li>If neither <code>uncrustify.cfg</code> nor custom file are specified, a temporary configuration file is generated from most suitable IntelliJ code style settings.</li>
+</ol>
+Please note that generated Uncrustify options are not perfect and never will be. Generated Uncrustify configuration files can however serve as a starting point for fine-tuning. To generate a config file and write it to a custom location, click the gear icon next to the scheme field in <b>Settings | Editor | Code Style</b> and select <b>Export > Uncrustify</b> config file.
     ]]></description>
 
     <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
@@ -39,8 +52,8 @@
     </extensions>
 
     <actions>
-        <action id="org.jetbrains.uncrustify.UncrustifyDebugAction"
-                class="org.jetbrains.uncrustify.UncrustifyDebugAction" text="Uncrustify Config Debug Action"
+        <action id="org.jetbrains.uncrustify.UncrustifyDevAction"
+                class="org.jetbrains.uncrustify.UncrustifyDevAction" text="Uncrustify Config Format Diff"
                 description="Opens a diff window to easily see the difference between IJ a Uncrustify formatting">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
         </action>

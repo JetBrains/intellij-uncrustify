@@ -15,9 +15,8 @@ import java.util.List;
 public class UncrustifyUtil {
     private static final Logger log = Logger.getInstance(UncrustifyUtil.class);
 
-    public static final List<String> supportedLanguagesIds = List.of(
+    public static final List<String> SUPPORTED_LANGUAGES_IDS = List.of(
             "JAVA", "ObjectiveC", "D");
-//            "C", "CPP", "D", "CS", "JAVA", "PAWN", "OC", "OC+", "VALA");
 
     // taken from https://github.com/uncrustify/uncrustify/blob/master/src/uncrustify.cpp
     public static final String[] SUPPORTED_EXTENSIONS = {

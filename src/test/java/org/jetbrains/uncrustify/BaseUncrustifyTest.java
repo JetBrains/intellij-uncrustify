@@ -8,12 +8,12 @@ import org.junit.jupiter.api.*;
 import java.nio.file.Path;
 
 public class BaseUncrustifyTest extends BasePlatformTestCase {
-    protected static String executablePath;
+    protected static String myExecutablePath;
 
     @BeforeAll
     public static void setUpExecutable() {
-        executablePath = System.getProperty("uncrustify.executablePath", null);
-        if (executablePath == null || executablePath.equals("null")) {
+        myExecutablePath = System.getProperty("uncrustify.executablePath", null);
+        if (myExecutablePath == null || myExecutablePath.equals("null")) {
             Assertions.fail("Uncrustify executable was not specified. Related tests cannot run.");
         }
 
@@ -29,11 +29,11 @@ public class BaseUncrustifyTest extends BasePlatformTestCase {
     public static void verifyExecutable() {
         try {
             UncrustifyExecutable.verify(
-                    executablePath,
+                    myExecutablePath,
                     new UncrustifyExecutable.VerificationListener() {
                         @Override
                         public void onInvalid() {
-                            Assertions.fail("Invalid Uncrustify executable. (Reason: Could not validate version) (Path: '" + executablePath + "')");
+                            Assertions.fail("Invalid Uncrustify executable. (Reason: Could not validate version) (Path: '" + myExecutablePath + "')");
                         }
 
                         @Override
@@ -42,7 +42,7 @@ public class BaseUncrustifyTest extends BasePlatformTestCase {
                     },
                     true);
         } catch (ExecutionException e) {
-            Assertions.fail("Could not run Uncrustify executable. (Reason: " + e.getMessage() + ") (Path: " + executablePath + ")");
+            Assertions.fail("Could not run Uncrustify executable. (Reason: " + e.getMessage() + ") (Path: " + myExecutablePath + ")");
         }
     }
 

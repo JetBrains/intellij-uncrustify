@@ -29,7 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @SuppressWarnings("UnstableApiUsage")
-public class UncrustifyDebugAction extends AnAction {
+public class UncrustifyDevAction extends AnAction {
     private static final boolean enabled = System.getProperties()
             .getProperty("uncrustify.devTools", "false")
             .equalsIgnoreCase("true");

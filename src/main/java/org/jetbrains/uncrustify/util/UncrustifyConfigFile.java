@@ -2,7 +2,6 @@ package org.jetbrains.uncrustify.util;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.process.CapturingProcessAdapter;
-import com.intellij.execution.process.OSProcessHandler;
 import com.intellij.execution.process.ProcessEvent;
 import com.intellij.lang.Language;
 import com.intellij.openapi.diagnostic.Logger;
@@ -40,10 +39,6 @@ public class UncrustifyConfigFile {
     }
 
     public static final String PROJECT_CONFIG_PATH = "uncrustify.cfg";
-
-    public enum Location {
-
-    }
 
     /**
      * There are 3 options for the location of the config file (sorted desc by priority):
@@ -104,7 +99,7 @@ public class UncrustifyConfigFile {
     }
 
     public static CommonCodeStyleSettings findRelevantCommonCodeStyleSettings(@NotNull CodeStyleSettings settings) {
-        return UncrustifyUtil.supportedLanguagesIds.stream()
+        return UncrustifyUtil.SUPPORTED_LANGUAGES_IDS.stream()
                 .map(Language::findLanguageByID)
                 .filter(Objects::nonNull)
                 .map(settings::getCommonSettings)
