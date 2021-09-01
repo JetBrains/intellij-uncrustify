@@ -17,10 +17,13 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.uncrustify.settings.UncrustifyFormatSettings;
 import org.jetbrains.uncrustify.settings.UncrustifySettingsState;
 import org.jetbrains.uncrustify.util.UncrustifyConfigFile;
+import org.jetbrains.uncrustify.util.UncrustifyExecutable;
 import org.jetbrains.uncrustify.util.UncrustifyUtil;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -83,38 +86,28 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
         protected void format(@NotNull String configPath, @NotNull String filename) {
             String text = formattingRequest.getDocumentText();
             try {
-                uncrustifyHandler = UncrustifyUtil.createProcessHandler(
+                uncrustifyHandler = UncrustifyExecutable.executeWithProcessListener(
                         getSettings().executablePath,
-                        "-c", configPath, "--assume", filename);
+                        List.of("-c", configPath, "--assume", filename),
+                        text,
+                        new CapturingProcessAdapter() {
+                            @Override
+                            public void processTerminated(@NotNull ProcessEvent event) {
+                                super.processTerminated(event);
 
-                uncrustifyHandler.addProcessListener(new CapturingProcessAdapter() {
-                    @Override
-                    public void processTerminated(@NotNull ProcessEvent event) {
-                        super.processTerminated(event);
-
-                        int exitCode = getOutput().getExitCode();
-                        if (exitCode != 0) {
-                            log.warn(String.format("uncrustify exitCode: %d", exitCode));
-                            log.debug(getOutput().getStdout());
-                            log.debug(getOutput().getStderr());
-                            formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
-                                    String.format(UncrustifyBundle.message("uncrustify.process.error.exitCode"), exitCode));
-                        } else {
-                            formattingRequest.onTextReady(getOutput().getStdout());
-                        }
-
-                    }
-                });
-                uncrustifyHandler.startNotify();
-
-                try (OutputStreamWriter osw = new OutputStreamWriter(uncrustifyHandler.getProcessInput())) {
-                    osw.write(text);
-                } catch (IOException e) {
-                    log.warn("uncrustify service failed: " + e.getMessage());
-                    log.debug(e);
-                    formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
-                            UncrustifyBundle.message("uncrustify.process.error.generalException"));
-                }
+                                int exitCode = getOutput().getExitCode();
+                                if (exitCode != 0) {
+                                    log.warn(String.format("uncrustify exitCode: %d", exitCode));
+                                    log.warn(getOutput().getStdout());
+                                    log.warn(getOutput().getStderr());
+                                    formattingRequest.onError(UncrustifyBundle.message("uncrustify.process.error.title"),
+                                            String.format(UncrustifyBundle.message("uncrustify.process.error.exitCode"), exitCode));
+                                } else {
+                                    formattingRequest.onTextReady(getOutput().getStdout());
+                                }
+                            }
+                        },
+                        false);
             } catch (ExecutionException e) {
                 log.warn("uncrustify service failed: " + e.getMessage());
                 log.debug(e);
@@ -123,26 +116,12 @@ public class UncrustifyAsyncFormattingService extends AsyncDocumentFormattingSer
             }
         }
 
-        /**
-         * There are 3 options for the location of the config file (sorted desc by priority):
-         * <ol>
-         *     <li>a file named 'uncrustify.cfg' in the project's directory</li>
-         *     <li>a file at custom path specified in Tools | Uncrustify settings</li>
-         *     <li>a temporary file automatically generated from IntelliJ code style settings</li>
-         * </ol>
-         */
         protected @NotNull String prepareConfig() throws IOException {
-            // 1
-            String configPath = UncrustifyConfigFile.getProjectConfigPath(formattingRequest.getContext().getProject());
-            if (configPath != null) {
-                return configPath;
+            String path = UncrustifyConfigFile.getConfigPath(formattingRequest.getContext().getProject());
+            if (path != null) {
+                return path;
             }
-            // 2
-            configPath = UncrustifyConfigFile.getSettingConfigPath();
-            if (configPath != null) {
-                return configPath;
-            }
-            // 3
+
             Path tempFilePath = FileUtil.createTempFile("ijuncrustify", ".cfg", true).toPath();
             UncrustifyConfigFile.exportCodeStyle(tempFilePath, CodeStyle.getLanguageSettings(formattingRequest.getContext().getContainingFile()));
             return tempFilePath.toString();

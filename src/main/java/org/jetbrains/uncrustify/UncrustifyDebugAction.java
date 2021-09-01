@@ -15,6 +15,7 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
@@ -36,12 +37,23 @@ public class UncrustifyDebugAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         super.update(e);
+
         if (!enabled) {
             e.getPresentation().setEnabledAndVisible(false);
             return;
         }
+
+        List<FormattingService> serviceList = FormattingService.EP_NAME.getExtensionList();
+        Optional<FormattingService> uncrustifyService = serviceList.stream().filter((s) -> s instanceof UncrustifyAsyncFormattingService).findFirst();
+        if (uncrustifyService.isEmpty()) {
+            e.getPresentation().setEnabledAndVisible(false);
+            return;
+        }
+
         e.getPresentation().setVisible(true);
-        e.getPresentation().setEnabled(getCurrentlySelectedFile(e) != null);
+
+        PsiFile currentFile = getCurrentlySelectedFile(e);
+        e.getPresentation().setEnabled(currentFile != null && uncrustifyService.get().canFormat(currentFile));
     }
 
     private @Nullable PsiFile getCurrentlySelectedFile(@NotNull AnActionEvent e) {
@@ -56,18 +68,7 @@ public class UncrustifyDebugAction extends AnAction {
             return null;
         }
 
-        PsiFile file = PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument());
-        if (file == null) {
-            return null;
-        }
-
-        List<FormattingService> serviceList = FormattingService.EP_NAME.getExtensionList();
-        Optional<FormattingService> uncrustifyService = serviceList.stream().filter((s) -> s instanceof UncrustifyAsyncFormattingService).findFirst();
-        if (uncrustifyService.isEmpty()) {
-            return null;
-        }
-
-        return uncrustifyService.get().canFormat(file) ? file : null;
+        return PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument());
     }
 
     @Override
@@ -90,11 +91,12 @@ public class UncrustifyDebugAction extends AnAction {
         if (fileToFormat == null) {
             return;
         }
+        String fileToFormatExtension = FileUtilRt.getExtension(fileToFormat.getName());
 
         String textToFormat = Objects.requireNonNull(PsiDocumentManager.getInstance(project).getDocument(fileToFormat)).getText();
 
-        VirtualFile coreFormattedFile = new LightVirtualFile("ij.java", fileToFormat.getLanguage(), textToFormat);
-        VirtualFile uncrustifyFormattedFile = new LightVirtualFile("uncrustify.java", fileToFormat.getLanguage(), textToFormat);
+        VirtualFile coreFormattedFile = new LightVirtualFile("ij." + fileToFormatExtension, fileToFormat.getLanguage(), textToFormat);
+        VirtualFile uncrustifyFormattedFile = new LightVirtualFile("uncrustify." + fileToFormatExtension, fileToFormat.getLanguage(), textToFormat);
 
         PsiFile uffPsi = PsiManager.getInstance(project).findFile(uncrustifyFormattedFile);
         PsiFile cffPsi = PsiManager.getInstance(project).findFile(coreFormattedFile);

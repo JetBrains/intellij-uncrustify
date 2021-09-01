@@ -2,26 +2,26 @@ package org.jetbrains.uncrustify.ui;
 
 import com.intellij.ui.AnimatedIcon;
 import com.intellij.ui.DocumentAdapter;
-import com.intellij.ui.SimpleColoredComponent;
+import com.intellij.ui.HyperlinkLabel;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.event.DocumentEvent;
 import javax.swing.text.Document;
 
-abstract public class DocumentCheckerComponent extends SimpleColoredComponent {
+abstract public class DocumentVerifierComponent extends HyperlinkLabel {
     public static final String EXECUTABLE_VALID_PROPERTY = "uncrustifyVersionValid";
 
     private boolean myCheckedPathValid;
     private final @NotNull Document myCheckedDocument;
 
-    public DocumentCheckerComponent(@NotNull Document document) {
+    public DocumentVerifierComponent(@NotNull Document document) {
         super();
         myCheckedDocument = document;
-        document.addDocumentListener(new PathToExecutableAdapter());
-        checkDocument();
+        document.addDocumentListener(new DocumentVerifierAdapter());
+        verifyDocument();
     }
 
-    private void setValid(boolean b) {
+    protected void setValid(boolean b) {
         boolean changed = myCheckedPathValid != b;
         myCheckedPathValid = b;
         if (changed) {
@@ -33,34 +33,22 @@ abstract public class DocumentCheckerComponent extends SimpleColoredComponent {
         return myCheckedDocument;
     }
 
-    public boolean isPathValid() {
+    public boolean isDocumentValid() {
         return myCheckedPathValid;
     }
 
-    public void setPathIsEmpty(String message) {
+    public void setDocumentIsBeingChecked() {
         setValid(false);
-    }
-
-    public void setPathIsValid(String message) {
-        setValid(true);
-    }
-
-    public void setPathIsInvalid(String message) {
-        setValid(false);
-    }
-
-    public void setPathIsBeingChecked(String message) {
-        setValid(false);
-        clear();
+        setText("");
         setIcon(AnimatedIcon.Default.INSTANCE);
     }
 
-    abstract public void checkDocument();
+    abstract public void verifyDocument();
 
-    public class PathToExecutableAdapter extends DocumentAdapter {
+    public class DocumentVerifierAdapter extends DocumentAdapter {
         @Override
         protected void textChanged(@NotNull DocumentEvent e) {
-            checkDocument();
+            verifyDocument();
         }
     }
 }

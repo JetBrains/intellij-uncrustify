@@ -25,6 +25,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.Objects;
 
 public class UncrustifyConfigFile {
@@ -35,20 +36,39 @@ public class UncrustifyConfigFile {
     public interface VerificationListener {
         void onValid();
 
-        void onInvalid();
+        void onInvalid(String output);
     }
 
-    private static final String PROJECT_CONFIG_PATH = "uncrustify.cfg";
+    public static final String PROJECT_CONFIG_PATH = "uncrustify.cfg";
+
+    public enum Location {
+
+    }
+
+    /**
+     * There are 3 options for the location of the config file (sorted desc by priority):
+     * <ol>
+     *     <li>a file named 'uncrustify.cfg' in the project's directory</li>
+     *     <li>a file at custom path specified in Tools | Uncrustify settings</li>
+     *     <li>a temporary file automatically generated from IntelliJ code style settings (for this case, this function returns {@code null})</li>
+     * </ol>
+     */
+    public static @Nullable String getConfigPath(@NotNull Project project) {
+        String path = getProjectConfigPath(project);
+        if (path != null) {
+            return path;
+        }
+
+        path = getSettingConfigPath();
+        return path;
+    }
 
     public static @Nullable String getProjectConfigPath(@NotNull Project project) {
         VirtualFile projectDir = ProjectUtil.guessProjectDir(project);
         if (projectDir != null) {
             VirtualFile projectConfig = projectDir.findChild(PROJECT_CONFIG_PATH);
             if (projectConfig != null) {
-                Path projectConfigPath = projectConfig.getFileSystem().getNioPath(projectConfig);
-                if (projectConfigPath != null) {
-                    return projectConfigPath.normalize().toAbsolutePath().toString();
-                }
+                return projectConfig.getPath();
             }
         }
         return null;
@@ -64,33 +84,23 @@ public class UncrustifyConfigFile {
     }
 
     public static void verify(@NotNull String executablePath, @NotNull String configPath, @NotNull VerificationListener listener, boolean block) throws ExecutionException {
-        OSProcessHandler handler = UncrustifyUtil.createProcessHandler(
+        UncrustifyExecutable.executeWithProcessListener(
                 executablePath,
-                "-c", configPath, "-l", "JAVA");
-        handler.addProcessListener(new CapturingProcessAdapter() {
-            public void processTerminated(@NotNull ProcessEvent event) {
-                super.processTerminated(event);
+                List.of("-c", configPath, "-l", "JAVA"),
+                JAVA_SNIPPET,
+                new CapturingProcessAdapter() {
+                    public void processTerminated(@NotNull ProcessEvent event) {
+                        super.processTerminated(event);
 
-                int exitCode = event.getExitCode();
-                if (exitCode == 0) {
-                    listener.onValid();
-                } else {
-                    listener.onInvalid();
-                }
-            }
-        });
-        //TODO after some timeout, kill the process (for cases when it doesn't terminate on its own for some reason)
-        handler.startNotify();
-
-        try (OutputStreamWriter osw = new OutputStreamWriter(handler.getProcessInput())) {
-            osw.write(JAVA_SNIPPET);
-        } catch (IOException e) {
-            throw new ExecutionException("Error when writing to Uncrustify stdin");
-        }
-
-        if (block) {
-            handler.waitFor();
-        }
+                        int exitCode = event.getExitCode();
+                        if (exitCode == 0) {
+                            listener.onValid();
+                        } else {
+                            listener.onInvalid(getOutput().getStderr());
+                        }
+                    }
+                },
+                block);
     }
 
     public static CommonCodeStyleSettings findRelevantCommonCodeStyleSettings(@NotNull CodeStyleSettings settings) {

@@ -16,7 +16,8 @@ public class UncrustifyUtil {
     private static final Logger log = Logger.getInstance(UncrustifyUtil.class);
 
     public static final List<String> supportedLanguagesIds = List.of(
-            "C", "CPP", "D", "CS", "JAVA", "PAWN", "OC", "OC+", "VALA");
+            "JAVA", "ObjectiveC", "D");
+//            "C", "CPP", "D", "CS", "JAVA", "PAWN", "OC", "OC+", "VALA");
 
     // taken from https://github.com/uncrustify/uncrustify/blob/master/src/uncrustify.cpp
     public static final String[] SUPPORTED_EXTENSIONS = {
@@ -54,7 +55,7 @@ public class UncrustifyUtil {
         return Arrays.asList(SUPPORTED_EXTENSIONS).contains(ext);
     }
 
-    public static @NotNull OSProcessHandler createProcessHandler(@NotNull String path, String... params) throws ExecutionException {
+    public static @NotNull OSProcessHandler createProcessHandler(@NotNull String path, @NotNull List<String> params) throws ExecutionException {
         GeneralCommandLine commandLine = new GeneralCommandLine()
                 .withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE)
                 .withExePath(path)
