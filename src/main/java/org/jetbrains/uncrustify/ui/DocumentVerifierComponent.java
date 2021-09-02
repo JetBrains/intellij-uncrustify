@@ -9,7 +9,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.text.Document;
 
 abstract public class DocumentVerifierComponent extends HyperlinkLabel {
-    public static final String EXECUTABLE_VALID_PROPERTY = "uncrustifyVersionValid";
+    public static final String DOCUMENT_VALID = "documentValid";
 
     private boolean myCheckedPathValid;
     private final @NotNull Document myCheckedDocument;
@@ -22,11 +22,9 @@ abstract public class DocumentVerifierComponent extends HyperlinkLabel {
     }
 
     protected void setValid(boolean b) {
-        boolean changed = myCheckedPathValid != b;
+        boolean old = myCheckedPathValid;
         myCheckedPathValid = b;
-        if (changed) {
-            firePropertyChange(EXECUTABLE_VALID_PROPERTY, !myCheckedPathValid, myCheckedPathValid);
-        }
+        firePropertyChange(DOCUMENT_VALID, old, myCheckedPathValid);
     }
 
     protected @NotNull Document getDocument() {

@@ -9,7 +9,6 @@ import com.intellij.openapi.ui.DialogBuilder;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.HtmlChunk;
-import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.GridBag;
@@ -23,7 +22,6 @@ import org.jetbrains.uncrustify.util.UncrustifyConfigFile;
 import org.jetbrains.uncrustify.util.UncrustifyExecutable;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -37,8 +35,7 @@ public class UncrustifySettingsComponent {
     private final TextFieldWithBrowseButton myExecutablePath = new TextFieldWithBrowseButton();
     private final VersionVerifierComponent myVersionCheckField = new VersionVerifierComponent(myExecutablePath.getTextField().getDocument());
     private final TextFieldWithBrowseButton myConfigPath = new TextFieldWithBrowseButton();
-    private final ConfigVerifierComponent myConfigCheckField = new ConfigVerifierComponent(
-            myConfigPath.getTextField().getDocument(), myExecutablePath.getTextField().getDocument());
+    private final ConfigVerifierComponent myConfigCheckField = new ConfigVerifierComponent(myConfigPath.getTextField().getDocument());
     private final JBLabel myConfigExplanationLabel = new JBLabel();
 
     public UncrustifySettingsComponent(@Nullable Project project) {
@@ -92,6 +89,12 @@ public class UncrustifySettingsComponent {
                 .wrapWith("body")
                 .wrapWith("html")
                 .toString());
+
+        myVersionCheckField.addPropertyChangeListener(VersionVerifierComponent.DOCUMENT_VALID, evt -> {
+            if (myVersionCheckField.isDocumentValid()) {
+                myConfigCheckField.verifyDocument();
+            }
+        });
     }
 
     public JPanel getPanel() {
@@ -127,6 +130,7 @@ public class UncrustifySettingsComponent {
 
         public VersionVerifierComponent(@NotNull Document document) {
             super(document);
+            setValid(false);
         }
 
         public void setPathIsEmpty() {
@@ -179,22 +183,13 @@ public class UncrustifySettingsComponent {
     private class ConfigVerifierComponent extends DocumentVerifierComponent {
         private @Nullable Runnable hyperlinkListener = null;
 
-        public ConfigVerifierComponent(@NotNull Document document, @NotNull Document executablePath) {
+        public ConfigVerifierComponent(@NotNull Document document) {
             super(document);
 
             this.addHyperlinkListener(e -> {
                 if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
                     if (hyperlinkListener != null) {
                         hyperlinkListener.run();
-                    }
-                }
-            });
-
-            executablePath.addDocumentListener(new DocumentAdapter() {
-                @Override
-                protected void textChanged(@NotNull DocumentEvent e) {
-                    if (isExecutablePathValid()) {
-                        verifyDocument();
                     }
                 }
             });
