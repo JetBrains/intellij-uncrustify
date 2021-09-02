@@ -8,10 +8,12 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogBuilder;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.util.text.HtmlChunk;
 import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.GridBag;
+import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +31,7 @@ import java.awt.*;
 
 public class UncrustifySettingsComponent {
     private static final Logger log = Logger.getInstance(UncrustifySettingsComponent.class);
+    private static final int MAX_LINE_WIDTH = 80;
 
     private final JPanel myMainPanel;
     private final TextFieldWithBrowseButton myExecutablePath = new TextFieldWithBrowseButton();
@@ -36,6 +39,7 @@ public class UncrustifySettingsComponent {
     private final TextFieldWithBrowseButton myConfigPath = new TextFieldWithBrowseButton();
     private final ConfigVerifierComponent myConfigCheckField = new ConfigVerifierComponent(
             myConfigPath.getTextField().getDocument(), myExecutablePath.getTextField().getDocument());
+    private final JBLabel myConfigExplanationLabel = new JBLabel();
 
     public UncrustifySettingsComponent(@Nullable Project project) {
         myMainPanel = new JPanel(new GridBagLayout());
@@ -51,6 +55,7 @@ public class UncrustifySettingsComponent {
         myMainPanel.add(new JBLabel(UncrustifyBundle.message("uncrustify.settings.configPath.label")), bag.nextLine().next());
         myMainPanel.add(myConfigPath, bag.next().fillCell());
         myMainPanel.add(myConfigCheckField, bag.nextLine().next().next().insets(0, 5, -1, -1).fillCell());
+        myMainPanel.add(myConfigExplanationLabel, bag.nextLine().next().next().fillCell());
         myMainPanel.add(Box.createVerticalGlue(), bag.nextLine().next().weighty(1.0).fillCell());
 
         myExecutablePath.addBrowseFolderListener(
@@ -69,6 +74,23 @@ public class UncrustifySettingsComponent {
 
         myVersionCheckField.setFontSize(UIUtil.FontSize.SMALL);
         myConfigCheckField.setFontSize(UIUtil.FontSize.SMALL);
+        myConfigExplanationLabel.setForeground(JBUI.CurrentTheme.ContextHelp.FOREGROUND);
+
+        String explanationText = UncrustifyBundle.message("uncrustify.settings.config.explanationHtml");
+        HtmlChunk explanationHtml = HtmlChunk.raw(explanationText);
+
+        if (explanationText.length() > MAX_LINE_WIDTH) {
+            explanationHtml = explanationHtml
+                    .wrapWith("div")
+                    .attr("width", myConfigExplanationLabel.getFontMetrics(myConfigExplanationLabel.getFont()).stringWidth(explanationText.substring(0, MAX_LINE_WIDTH)));
+        } else {
+            explanationHtml = explanationHtml.wrapWith("div");
+        }
+
+        myConfigExplanationLabel.setText(explanationHtml
+                .wrapWith("body")
+                .wrapWith("html")
+                .toString());
     }
 
     public JPanel getPanel() {
