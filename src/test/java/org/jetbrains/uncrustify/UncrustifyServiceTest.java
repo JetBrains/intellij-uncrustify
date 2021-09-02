@@ -65,10 +65,12 @@ public class UncrustifyServiceTest extends BaseUncrustifyTest {
         settings.executablePath = myExecutablePath;
         settings.configPath = Path.of(getTestDataPath(), "valid.cfg").toAbsolutePath().toString();
         String originalText = myFixture.getFile().getText();
-        WriteCommandAction.writeCommandAction(myFixture.getProject()).run(() -> {
-            myUncrustifyService.formatRanges(myFixture.getFile(), new FormatTextRanges(myFixture.getFile().getTextRange(), true), false, false);
-        });
-        //FIXME
+        WriteCommandAction.writeCommandAction(myFixture.getProject()).run(() ->
+                myUncrustifyService.formatRanges(
+                        myFixture.getFile(),
+                        new FormatTextRanges(myFixture.getFile().getTextRange(), true), false, false));
+        // This line is a workaround, to make sure formatted text is ready when the assertion is executed. Platform fix
+        // is needed before this line can be removed.
         Thread.sleep(1000);
         String formattedText = myFixture.getFile().getText();
         Assertions.assertNotEquals(originalText, formattedText);

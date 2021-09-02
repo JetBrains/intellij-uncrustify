@@ -75,6 +75,7 @@ public class UncrustifySettingsComponent {
         myVersionCheckField.setFontSize(UIUtil.FontSize.SMALL);
         myConfigCheckField.setFontSize(UIUtil.FontSize.SMALL);
         myConfigExplanationLabel.setForeground(JBUI.CurrentTheme.ContextHelp.FOREGROUND);
+        myConfigExplanationLabel.setComponentStyle(UIUtil.ComponentStyle.SMALL);
 
         String explanationText = UncrustifyBundle.message("uncrustify.settings.config.explanationHtml");
         HtmlChunk explanationHtml = HtmlChunk.raw(explanationText);
