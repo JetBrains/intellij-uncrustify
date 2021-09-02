@@ -69,8 +69,8 @@ public class UncrustifyServiceTest extends BaseUncrustifyTest {
                 myUncrustifyService.formatRanges(
                         myFixture.getFile(),
                         new FormatTextRanges(myFixture.getFile().getTextRange(), true), false, false));
-        // This line is a workaround, to make sure formatted text is ready when the assertion is executed. Platform fix
-        // is needed before this line can be removed.
+        //TODO This line is a workaround to make sure formatted text is ready when the assertion is executed. Platform
+        // fix is needed before this line can be removed.
         Thread.sleep(1000);
         String formattedText = myFixture.getFile().getText();
         Assertions.assertNotEquals(originalText, formattedText);

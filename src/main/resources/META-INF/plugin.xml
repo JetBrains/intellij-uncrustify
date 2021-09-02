@@ -17,8 +17,11 @@ There are three possibilities when the plugin selects an Uncrustify configuratio
     <li>If <code>uncrustify.cfg</code> cannot be found in the project folder, custom file specified in <b>Settings | Tools | Uncrustify</b> is used.</li>
     <li>If neither <code>uncrustify.cfg</code> nor custom file are specified, a temporary configuration file is generated from most suitable IntelliJ code style settings.</li>
 </ol>
-Please note that generated Uncrustify options are not perfect and never will be. Generated Uncrustify configuration files can however serve as a starting point for fine-tuning. To generate a config file and write it to a custom location, click the gear icon next to the scheme field in <b>Settings | Editor | Code Style</b> and select <b>Export > Uncrustify</b> config file.
-    ]]></description>
+Please note that generated Uncrustify options are not perfect and never will be. Generated Uncrustify configuration files can however serve as a starting point for fine-tuning. To generate a config file and write it to a custom location, click the gear icon next to the scheme field in <b>Settings | Editor | Code Style</b> and select <b>Export > Uncrustify config file</b>.
+
+<h3>Feedback</h3>
+Please report any issues, bugs and suggestions you might have to <a href="https://youtrack.jetbrains.com/newIssue?project=IJUCF">YouTrack</a>.
+]]></description>
 
     <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
          on how to target different products -->

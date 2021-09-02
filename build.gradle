@@ -3,8 +3,8 @@ plugins {
     id 'java'
 }
 
-group 'org.example'
-version '1.0-SNAPSHOT'
+group 'org.jetbrains.uncrustify'
+version '0.1'
 
 repositories {
     mavenCentral()
@@ -24,10 +24,9 @@ patchPluginXml {
 }
 
 test {
-    systemProperty('uncrustify.executablePath', System.getProperty("uncrustify.executablePath", null))
+    systemProperty('uncrustify.executablePath', /* Fill me */ null)
     useJUnitPlatform()
 }
 
 runIde {
-    systemProperty('uncrustify.devTools', System.getProperty("uncrustify.devTools", "false"))
 }

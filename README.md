@@ -21,10 +21,14 @@ There are three possibilities when the plugin selects an Uncrustify configuratio
 
 Please note that generated Uncrustify options are not perfect and never will be. Generated Uncrustify configuration files can however serve as a starting point for fine-tuning. To generate a config file and write it to a custom location, click the gear icon next to the scheme field in `Settings | Editor | Code Style` and select `Export > Uncrustify config file`.
 
+## Feedback
+
+Please report any issues, bugs and suggestions you might have at https://youtrack.jetbrains.com/newIssue?project=IJUCF.
+
 ## Tests
 
-To run tests, you need to first pass a path to an Uncrustify executable to the tested Java process. 
-You can specify it in build.gradle by modifying the `test` task:
+To run tests, you need to first pass a path to an Uncrustify executable to the tested Java process as a system property. 
+You can do it in `build.gradle` by modifying the `test` task:
 ```
 test {
     systemProperty('uncrustify.executablePath', '<your path to Uncrustify executable>')
@@ -34,9 +38,9 @@ test {
 
 ## Development Tools
 
-There is a tool, that visualises differences between IntelliJ and Uncrustify formatting using a diff window. 
+There is a tool that visualises differences between IntelliJ's integrated and Uncrustify formatting using a diff window. 
 
-To enable it, set uncrustify.useDevTools system property to true. (Either by modifying build.gradle, or by passing it to gradle task using `-D=...` in run configuration settings, it will get propagated by build.gradle to the IDE process).
+To enable it, you must set uncrustify.useDevTools system property to true. This can again be done by adding `systemProperty(...)` to `runIde` task in `build.gradle`.
 
 Then, you should see `Uncrustify Config Format Diff` item in `Tools` menu. The tool formats currently selected file and uses the same rules for which configuration file to use.
 
