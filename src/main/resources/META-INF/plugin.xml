@@ -2,7 +2,6 @@
     <id>org.jetbrains.uncrustify</id>
     <name>Uncrustify</name>
     <vendor email="vojtech.balik@jetbrains.com" url="http://www.jetbrains.com">JetBrains</vendor>
-    <idea-version since-build="2012.2"/>
 
     <description><![CDATA[
 Invokes <a href="https://github.com/uncrustify/uncrustify">Uncrustify</a> to format code.

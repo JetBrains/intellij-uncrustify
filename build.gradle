@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'org.jetbrains.uncrustify'
-version '0.1'
+version '0.2'
 
 repositories {
     mavenCentral()
@@ -18,13 +18,21 @@ dependencies {
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
     version = '2021.2'
+    updateSinceUntilBuild = true
 }
 
 patchPluginXml {
+    sinceBuild = '212'
+    untilBuild = ''
+    changeNotes = """
+      <h3>0.2</h3>
+      <ul>
+      <li>Fix misconfigured IDE version compatibility
+      </ul>"""
 }
 
 test {
-    systemProperty('uncrustify.executablePath', /* Fill me */ null)
+    systemProperty('uncrustify.executablePath', /* Fill me in */ null)
     useJUnitPlatform()
 }
 
