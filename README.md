@@ -4,9 +4,7 @@
 
 Download links:
 
-SSH clone URL: ssh://git@git.jetbrains.team/ijuncrustify/ijuncrustify.git
-
-HTTPS clone URL: https://git.jetbrains.team/ijuncrustify/ijuncrustify.git
+https://plugins.jetbrains.com/plugin/17528-uncrustify
 
 ## Usage
 
@@ -45,8 +43,6 @@ To enable it, you must set uncrustify.useDevTools system property to true. This 
 Then, you should see `Uncrustify Config Format Diff` item in `Tools` menu. The tool formats currently selected file and uses the same rules for which configuration file to use.
 
 ## Resources
-
-Project page: https://jetbrains.team/p/ijuncrustify
 
 Uncrustify github: https://github.com/uncrustify/uncrustify
 
